@@ -6,7 +6,7 @@ import io
 st.set_page_config(page_title="SMT AOI 萬用轉檔工具", layout="centered")
 
 st.title("🚀 SMT AOI 萬用轉檔工具")
-st.write("自動辨識排版、移除標題、過濾重複項。")
+st.info("介面已優化：下載按鈕已置頂，預覽資料已隱藏。")
 
 # 檔案上傳
 uploaded_file = st.file_uploader("選擇 AOI 檔案", type=['aoi'])
@@ -50,22 +50,22 @@ if uploaded_file is not None:
             base_name = uploaded_file.name.rsplit('.', 1)[0]
             new_filename = f"{base_name}.txt"
             
-            # --- 介面優化部分 ---
+            # --- 介面精簡優化 ---
             st.success(f"✅ 轉換成功！處理了 {len(output_rows)} 個零件。")
             
-            # 1. 把下載按鈕放在最醒目的地方
+            # 1. 立即顯示下載按鈕
             st.download_button(
                 label="📥 點此下載轉檔後的 TXT 檔案",
                 data="\r\n".join(output_rows),
                 file_name=new_filename,
                 mime='text/plain',
-                use_container_width=True # 讓按鈕變大好點擊
+                use_container_width=True
             )
             
-            # 2. 把落落長的資料預覽收進摺疊選單
-            with st.expander("🔍 點擊展開/收合資料預覽"):
-                st.text("\n".join(output_rows))
-            # ------------------
+            # 2. 移除原本直接顯示的資料，改用空的容器或極小的預覽
+            st.write("---")
+            with st.expander("🔍 點擊展開查看零件清單預覽"):
+                st.code("\n".join(output_rows), language="text")
             
         else:
             st.error("❌ 無法解析此檔案，請確認內容格式是否有變動。")
