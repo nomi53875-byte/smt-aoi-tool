@@ -6,7 +6,7 @@ import io
 st.set_page_config(page_title="SMT AOI 萬用轉檔工具", layout="centered")
 
 st.title("🚀 SMT AOI 萬用轉檔工具")
-st.info("介面已優化：下載按鈕已置頂，預覽資料已隱藏。")
+st.success("✨ 系統已更新：已徹底移除下方資料預覽，保持介面清爽。")
 
 # 檔案上傳
 uploaded_file = st.file_uploader("選擇 AOI 檔案", type=['aoi'])
@@ -27,13 +27,13 @@ if uploaded_file is not None:
             
             if len(parts) >= 6:
                 try:
-                    # 測試新格式 (BNG/BAG)：Ref=0, X=3, Y=4, Angle=5, Name=2
+                    # 測試格式 A (BNG/BAG)：Ref=0, X=3, Y=4, Angle=5, Name=2
                     designator = parts[0].strip()
                     x, y, angle, part_no = parts[3].strip(), parts[4].strip(), parts[5].strip(), parts[2].strip()
                     float(x), float(y) 
                 except (ValueError, IndexError):
                     try:
-                        # 測試舊格式：Ref=5, X=1, Y=2, Angle=3, Name=7
+                        # 測試格式 B (舊格式)：Ref=5, X=1, Y=2, Angle=3, Name=7
                         designator = parts[5].strip()
                         x, y, angle, part_no = parts[1].strip(), parts[2].strip(), parts[3].strip(), parts[7].strip()
                         float(x), float(y) 
@@ -50,10 +50,10 @@ if uploaded_file is not None:
             base_name = uploaded_file.name.rsplit('.', 1)[0]
             new_filename = f"{base_name}.txt"
             
-            # --- 介面精簡優化 ---
-            st.success(f"✅ 轉換成功！處理了 {len(output_rows)} 個零件。")
+            # 顯示處理結果
+            st.info(f"✅ 解析完成！共偵測到 {len(output_rows)} 個零件。")
             
-            # 1. 立即顯示下載按鈕
+            # 下載按鈕 (直接顯示，下方不再有任何文字)
             st.download_button(
                 label="📥 點此下載轉檔後的 TXT 檔案",
                 data="\r\n".join(output_rows),
@@ -61,11 +61,6 @@ if uploaded_file is not None:
                 mime='text/plain',
                 use_container_width=True
             )
-            
-            # 2. 移除原本直接顯示的資料，改用空的容器或極小的預覽
-            st.write("---")
-            with st.expander("🔍 點擊展開查看零件清單預覽"):
-                st.code("\n".join(output_rows), language="text")
             
         else:
             st.error("❌ 無法解析此檔案，請確認內容格式是否有變動。")
