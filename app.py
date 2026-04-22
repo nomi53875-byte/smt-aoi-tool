@@ -2,67 +2,79 @@ import streamlit as st
 import pandas as pd
 import io
 
-# 網頁基本設定
-st.set_page_config(page_title="SMT AOI 座標轉檔工具", layout="centered")
+# 網頁標題與設定
+st.set_page_config(page_title="SMT AOI 萬用轉檔工具", layout="centered")
 
-st.title("🚀 SMT AOI 自動轉檔工具")
-st.write("請上傳 `.aoi` 原始檔，系統將自動過濾重複項、移除標題並轉換格式。")
+st.title("🚀 SMT AOI 萬用轉檔工具 (自動排版糾錯)")
+st.write("此版本已修正：自動偵測標題行、防止首行遺失、解決不同排版欄位錯位問題。")
 
-# 檔案上傳區塊
+# 檔案上傳
 uploaded_file = st.file_uploader("選擇 AOI 檔案", type=['aoi'])
 
 if uploaded_file is not None:
     try:
-        # 讀取上傳的內容
+        # 讀取內容，使用 gbk 編碼
         content = uploaded_file.read().decode('gbk', errors='ignore')
         lines = content.splitlines()
         
         output_rows = []
-        seen_designators = set() # 用於去重複
+        seen_designators = set()
         
-        # 核心處理邏輯
         for line in lines:
-            parts = line.strip().split(',')
+            line = line.strip()
+            if not line: continue
             
-            if len(parts) > 9:
-                designator = parts[5].strip()
-                part_type = parts[9].strip()
+            parts = line.split(',')
+            
+            # 偵測這行是否為有效零件行
+            if len(parts) >= 6:
+                # 針對新檔案 (BNG/BAG系列)：參考號在 index 0, X在 3, Y在 4, 角度在 5, 元件名在 2
+                # 針對舊檔案：參考號在 index 5, X在 1, Y在 2, 角度在 3, 元件名在 7
                 
-                # 過濾條件：
-                # 1. 標示符要有資料 2. 排除標題字眼 3. 排除基準點 4. 排除重複
-                if designator and "标示符" not in line and "展开" not in line and "基准" not in part_type:
-                    if designator not in seen_designators:
-                        x = parts[1].strip()
-                        y = parts[2].strip()
-                        angle = parts[3].strip()
-                        part_no = parts[7].strip()
-                        
-                        # 組合為 Tab 隔開的格式
+                # 自動判斷欄位邏輯：
+                # 如果 index 3 和 4 都是數字，代表是新格式
+                # 如果 index 1 和 2 都是數字，代表是舊格式
+                try:
+                    # 測試新格式 (BNG/BAG)
+                    designator = parts[0].strip()
+                    x, y, angle, part_no = parts[3].strip(), parts[4].strip(), parts[5].strip(), parts[2].strip()
+                    float(x), float(y) # 驗證是否為數字
+                except (ValueError, IndexError):
+                    try:
+                        # 測試舊格式
+                        designator = parts[5].strip()
+                        x, y, angle, part_no = parts[1].strip(), parts[2].strip(), parts[3].strip(), parts[7].strip()
+                        float(x), float(y) # 驗證是否為數字
+                    except (ValueError, IndexError):
+                        continue # 兩者都不符，跳過此行 (可能是標題)
+
+                # 過濾：排除中文字標題、重複項、基準點
+                if designator and not any(k in designator for k in ["参考号", "库", "標示符", "Designator"]):
+                    if designator not in seen_designators and "基准" not in line:
                         row = f"{designator}\t{x}\t{y}\t{angle}\tT\t{part_no}"
                         output_rows.append(row)
                         seen_designators.add(designator)
-        
+
         if output_rows:
-            # 準備下載內容，強制使用 Windows 換行符號
-            final_txt = "\r\n".join(output_rows)
+            # 處理檔名
+            base_name = uploaded_file.name.rsplit('.', 1)[0]
+            new_filename = f"{base_name}.txt"
             
-            st.success(f"✅ 處理完成！共有 {len(output_rows)} 個唯一零件。")
+            st.success(f"✅ 轉換成功！處理了 {len(output_rows)} 個零件。")
             
             # 下載按鈕
             st.download_button(
-                label="📥 下載轉換後的 TXT 檔",
-                data=final_txt,
-                file_name=uploaded_file.name.replace('.aoi', '.txt'),
+                label="📥 下載轉檔後的 TXT",
+                data="\r\n".join(output_rows),
+                file_name=new_filename,
                 mime='text/plain'
             )
             
-            # 預覽介面
             st.write("---")
-            st.write("🧪 資料預覽 (前5筆)：")
-            st.text("\n".join(output_rows[:5]))
-            
+            st.write("🧪 零件預覽：")
+            st.text("\n".join(output_rows[:10]))
         else:
-            st.warning("⚠️ 檔案中找不到符合條件的數據。")
+            st.error("❌ 無法解析此檔案，請確認內容格式是否有變動。")
             
     except Exception as e:
-        st.error(f"🚨 發生錯誤: {e}")
+        st.error(f"🚨 處理失敗: {e}")
